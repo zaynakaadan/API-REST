@@ -30,16 +30,29 @@ class AppFixtures extends Fixture
 
         }
 
-        for ($c=0; $c < 4; $c++) {
+        
+            // Création d'un client "normal"
             $client = new Client();            
-            $client->setEmail("client$c@bilemo.com");
-            $client->setPassword($this->userPasswordHasher->hashPassword($client, "passwordClient$c"));
+            $client->setEmail("client@bilemo.com");
+            $client->setPassword($this->userPasswordHasher->hashPassword($client, "passwordClient"));
             $client->setName($faker->company());
+            $client->setRoles(['ROLE_USER']); // Assign the ROLE_USER role
             $datetime = \DateTimeImmutable::createFromMutable($faker->dateTimeBetween('-1 year', 'now'));
             $client->setCreatedAt($datetime);
             $clients[] = $client;
             $manager->persist($client);
-        }
+
+            // Création d'un client admin
+            $clientAdmin = new Client();            
+            $clientAdmin->setEmail("clientadmin@bilemo.com");
+            $clientAdmin->setPassword($this->userPasswordHasher->hashPassword($client, "passwordClientAdmin"));
+            $clientAdmin->setName($faker->company());
+            $clientAdmin->setRoles(['ROLE_ADMIN']); // Assign the ROLE_USER role
+            $datetime = \DateTimeImmutable::createFromMutable($faker->dateTimeBetween('-1 year', 'now'));
+            $clientAdmin->setCreatedAt($datetime);
+            $clientsAdmin[] = $clientAdmin;
+            $manager->persist($clientAdmin);
+        
 
         for ($j=0; $j < 15; $j++) {
             $user = new User();
