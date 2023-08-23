@@ -24,6 +24,9 @@ class Client implements UserInterface, PasswordAuthenticatedUserInterface
     #[Groups(['getUser'])]
     private ?string $email = null;
 
+    #[ORM\Column]
+    private array $roles = [];
+
     /**
      * @var string The hashed password
      */
@@ -64,13 +67,18 @@ class Client implements UserInterface, PasswordAuthenticatedUserInterface
         $this->email = $email;
 
         return $this;
-    }
-    
-    private array $roles = [];
+    }    
 
+    /**
+     * @see UserInterface
+     */
     public function getRoles(): array
     {
-        return $this->roles;
+        $roles = $this->roles;
+        // guarantee every user at least has ROLE_USER
+        $roles[] = 'ROLE_USER';
+
+        return array_unique($roles);
     }
 
     public function setRoles(array $roles): self
