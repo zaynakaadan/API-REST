@@ -22,9 +22,12 @@ class UserController extends AbstractController
 {
     #[Route('/api/users', name: 'user', methods: ['GET'])]
     #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour voir les list de les utilisateurs')]
-    public function getAllUsers(UserRepository $userRepository, SerializerInterface $serializer): JsonResponse
+    public function getAllUsers(UserRepository $userRepository, SerializerInterface $serializer, Request $request): JsonResponse
     {
-        $userList = $userRepository->findAll();
+        $page = $request->get('page', 1);
+        $limit = $request->get('limit', 3);
+
+        $userList = $userRepository->findAllWithPagination($page, $limit);
 
         $jsonUserList = $serializer->serialize($userList, 'json', ['groups' => 'getUser']);
         return new JsonResponse($jsonUserList, Response::HTTP_OK, [], true);                   
