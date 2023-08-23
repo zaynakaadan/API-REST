@@ -3,106 +3,154 @@
 namespace App\Controller;
 
 use App\Entity\User;
+use App\Entity\Client;
 use App\Repository\UserRepository;
 use App\Repository\ClientRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use \Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Serializer\SerializerInterface;
+use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
-use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
 use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\DependencyInjection\Loader\Configurator\validator;
 
 class UserController extends AbstractController
 {
     #[Route('/api/users', name: 'user', methods: ['GET'])]
-    #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour voir les list de les utilisateurs')]
-    public function getAllUsers(UserRepository $userRepository, SerializerInterface $serializer, Request $request): JsonResponse
+    public function getAllUsers(UserRepository $userRepository, SerializerInterface $serializer, Security $security,Request $request): JsonResponse
     {
+        // Get the currently authenticated user
+        /** @var UserInterface $currentUser */
+        $currentUser = $security->getUser();
+
+        // If the user is not a client, return an access denied response
+        if (!$currentUser instanceof Client) {
+            throw $this->createAccessDeniedException('Vous n\'êtes pas autorisé à consulter cette liste d\'utilisateurs.');
+        }
+
         $page = $request->get('page', 1);
         $limit = $request->get('limit', 3);
 
-        $userList = $userRepository->findAllWithPagination($page, $limit);
+        // Retrieve the users associated with the current client
+        $userList = $userRepository->findUsersByClientWithPagination($currentUser, $page, $limit);
 
         $jsonUserList = $serializer->serialize($userList, 'json', ['groups' => 'getUser']);
-        return new JsonResponse($jsonUserList, Response::HTTP_OK, [], true);                   
+        return new JsonResponse($jsonUserList, Response::HTTP_OK, [], true);
+    
     }
 
 
-    #[Route('/api/users/{id}', name: 'detailUser', methods: ['GET'])]
-    #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour voir le detail de l\'utilisateur')]
-    public function getDetailUser(User $user, SerializerInterface $serializer)
-    {            
-            $jsonUser = $serializer->serialize($user, 'json', ['groups' => 'getUser']);
-            return new JsonResponse($jsonUser, Response::HTTP_OK, [], true);                                      
+    #[Route('/api/users/{id}', name: 'detailUser', methods: ['GET'])]   
+    public function getDetailUser(User $requestedUser, SerializerInterface $serializer, Security $security)
+    {   
+        // Get the currently authenticated user
+        $currentUser = $security->getUser();
+
+        // Make sure the $currentUser is a Client and $requestedUser is not null
+        if (!$currentUser instanceof Client || $requestedUser === null) {
+         throw new AccessDeniedHttpException('Vous n\'êtes pas autorisé à voir cet utilisateur.');
+        }
+
+        // Check if the requested user is associated with the current client
+        if ($requestedUser->getClient() !== $currentUser) {
+            throw new AccessDeniedHttpException('Vous n\'êtes pas autorisé à voir cet utilisateur.');
+        }
+
+        $jsonUser = $serializer->serialize($requestedUser, 'json', ['groups' => 'getUser']);
+        return new JsonResponse($jsonUser, Response::HTTP_OK, [], true);
     }
+
 
     #[Route('/api/users/{id}', name: 'deleteUser', methods: ['DELETE'])]
-    #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour supprimer un utilisateur')]
-    public function deleteUser(User $user, EntityManagerInterface $em): JsonResponse    
-    {       $em->remove($user);     
+    public function deleteUser(User $requestedUser, EntityManagerInterface $em, Security $security): JsonResponse    
+    {      
+        
+        $currentUser = $security->getUser();
+
+        // Check if the $currentUser is a Client and $requestedUser is not null to delete the user
+        if (!$currentUser instanceof Client || $requestedUser === null) {
+            throw new AccessDeniedHttpException('Vous n\'êtes pas autorisé de supprimer cet utilisateur.');
+        }
+        // Check if the requested user is associated with the current client
+        if ($requestedUser->getClient() !== $currentUser) {
+            throw new AccessDeniedHttpException('Vous n\'êtes pas autorisé de supprimer cet utilisateur.');
+        }    
+            $em->remove($requestedUser);
             $em->flush();
-            return new JsonResponse(null, Response::HTTP_NO_CONTENT);                                      
+
+        return new JsonResponse(null, Response::HTTP_NO_CONTENT);    
     }
 
-    #[Route('/api/users', name: 'createUser', methods: ['POST'])]
-    #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour créer un utilisateur')]
-    public function createUser(Request $request, SerializerInterface $serializer, EntityManagerInterface $em, UrlGeneratorInterface $urlGenerator, ClientRepository $clientRepository, ValidatorInterface $validator)
+    #[Route('/api/users', name: 'createUser', methods: ['POST'])]    
+    public function createUser(Request $request, SerializerInterface $serializer, EntityManagerInterface $em, UrlGeneratorInterface $urlGenerator, ClientRepository $clientRepository, ValidatorInterface $validator, Security $security)
     {    
-           $user = $serializer->deserialize($request->getContent(), User::class, 'json') ;           
+        // Deserialize the user data from the request content
+        $user = $serializer->deserialize($request->getContent(), User::class, 'json');
 
-            // On vérifie les erreurs
+        // Check if the current user is a client
+        $currentUser = $security->getUser();
+        if (!$currentUser instanceof Client) {
+            throw new AccessDeniedHttpException('Vous n\'êtes pas autorisé à créer un utilisateur.');
+        }   
+
+        // Set the current client as the user's client
+        $user->setClient($currentUser);
+
+        // Validate the user data
         $errors = $validator->validate($user);
-        if ($errors->count() > 0) {
+        if (count($errors) > 0) {
             return new JsonResponse($serializer->serialize($errors, 'json'), JsonResponse::HTTP_BAD_REQUEST, [], true);
         }
 
-            // Récupération de l'ensemble des données envoyées sous forme de tableau
-            $content = $request->toArray();
-            // Récupération de l'idClient. S'il n'est pas défini, alors on met -1 par défaut
-            $idClient = $content['idClient'] ?? -1;
+        // Persist and flush the user entity
+        $em->persist($user);
+        $em->flush();
 
-            // On cherche le client qui correspond et on l'assigne au user
-            // Si "find" ne trouve pas le client, alors null sera retourné.
-            $user->setClient($clientRepository->find($idClient));
-
-            $em->persist($user);
-            $em->flush();
-
-            $jsonUser = $serializer->serialize($user, 'json', ['groups' => 'getUser']);
-
-            $location = $urlGenerator->generate('detailUser', ['id' => $user->getId(), UrlGeneratorInterface::ABSOLUTE_PATH]);
-
-            return new JsonResponse($jsonUser, Response::HTTP_CREATED, ["Location" => $location], true);                                      
+        // Serialize the user data and return the response
+        $jsonUser = $serializer->serialize($user, 'json', ['groups' => 'getUser']);
+        $location = $urlGenerator->generate('detailUser', ['id' => $user->getId()], UrlGeneratorInterface::ABSOLUTE_PATH);
+        return new JsonResponse($jsonUser, JsonResponse::HTTP_CREATED, ["Location" => $location], true);                                            
     }
 
     #[Route('/api/users/{id}', name: 'updateUser', methods: ['PUT'])]
-    #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour modifier l\'utilisateur')]
-    public function updateUser(Request $request, SerializerInterface $serializer, EntityManagerInterface $em, UrlGeneratorInterface $urlGenerator, ClientRepository $clientRepository, User $currentUser)
-    { 
+    public function updateUser(User $requestedUser, Request $request, SerializerInterface $serializer, EntityManagerInterface $em, UrlGeneratorInterface $urlGenerator, ClientRepository $clientRepository, User $currentUser, Security $security, ValidatorInterface $validator)        
+    {   
+        // Ensure the current user is a client
+        $currentUser = $security->getUser();
+        if (!$currentUser instanceof Client) {
+            throw new AccessDeniedHttpException('Vous n\'êtes pas autorisé à mettre à jour cet utilisateur.');
+        }
 
-              $updatedUser = $serializer->deserialize($request->getContent(), User::class, 'json',
-               
-                    [AbstractNormalizer::OBJECT_TO_POPULATE => $currentUser]);          
+        // Check if the requested user is associated with the current client
+        if ($requestedUser->getClient() !== $currentUser) {
+            throw new AccessDeniedHttpException('Vous n\'êtes pas autorisé à mettre à jour cet utilisateur.');
+        }
 
-            // Récupération de l'ensemble des données envoyées sous forme de tableau
-            $content = $request->toArray();
-            // Récupération de l'idClient. S'il n'est pas défini, alors on met -1 par défaut
-            $idClient = $content['idClient'] ?? -1;
+        // Deserialize the updated user data from the request content
+        $updatedUser = $serializer->deserialize(
+        $request->getContent(),
+        User::class,
+        'json',
+        [AbstractNormalizer::OBJECT_TO_POPULATE => $requestedUser]
+        );
 
-            // On cherche le client qui correspond et on l'assigne au user
-            // Si "find" ne trouve pas le client, alors null sera retourné.
-            $updatedUser->setClient($clientRepository->find($idClient));
+        // Validate the updated user data
+        $errors = $validator->validate($updatedUser);
+        if (count($errors) > 0) {
+            return new JsonResponse($serializer->serialize($errors, 'json'), JsonResponse::HTTP_BAD_REQUEST, [], true);
+        }
 
-            $em->persist($updatedUser);
-            $em->flush();
-                        
-            return new JsonResponse(null, Response::HTTP_NO_CONTENT);                                      
+        // Persist and flush the updated user entity
+        $em->persist($updatedUser);
+        $em->flush();
+                    
+        return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }
-
 }

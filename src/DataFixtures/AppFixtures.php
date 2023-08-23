@@ -36,7 +36,7 @@ class AppFixtures extends Fixture
             $client->setEmail("client@bilemo.com");
             $client->setPassword($this->userPasswordHasher->hashPassword($client, "passwordClient"));
             $client->setName($faker->company());
-            $client->setRoles(['ROLE_USER']); // Assign the ROLE_USER role
+            $client->setRoles(['ROLE_CLIENT']); // Assign the ROLE_CLIENT role
             $datetime = \DateTimeImmutable::createFromMutable($faker->dateTimeBetween('-1 year', 'now'));
             $client->setCreatedAt($datetime);
             $clients[] = $client;
@@ -47,7 +47,7 @@ class AppFixtures extends Fixture
             $clientAdmin->setEmail("clientadmin@bilemo.com");
             $clientAdmin->setPassword($this->userPasswordHasher->hashPassword($clientAdmin, "passwordClientAdmin"));
             $clientAdmin->setName($faker->company());
-            $clientAdmin->setRoles(['ROLE_ADMIN']); // Assign the ROLE_USER role
+            $clientAdmin->setRoles(['ROLE_ADMIN']); // Assign the ROLE_ADMIN role
             $datetime = \DateTimeImmutable::createFromMutable($faker->dateTimeBetween('-1 year', 'now'));
             $clientAdmin->setCreatedAt($datetime);
             $clientsAdmin[] = $clientAdmin;
