@@ -13,6 +13,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
 use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\DependencyInjection\Loader\Configurator\validator;
@@ -20,6 +21,7 @@ use Symfony\Component\DependencyInjection\Loader\Configurator\validator;
 class UserController extends AbstractController
 {
     #[Route('/api/users', name: 'user', methods: ['GET'])]
+    #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour voir les list de les utilisateurs')]
     public function getAllUsers(UserRepository $userRepository, SerializerInterface $serializer): JsonResponse
     {
         $userList = $userRepository->findAll();
@@ -30,6 +32,7 @@ class UserController extends AbstractController
 
 
     #[Route('/api/users/{id}', name: 'detailUser', methods: ['GET'])]
+    #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour voir le detail de l\'utilisateur')]
     public function getDetailUser(User $user, SerializerInterface $serializer)
     {            
             $jsonUser = $serializer->serialize($user, 'json', ['groups' => 'getUser']);
@@ -37,6 +40,7 @@ class UserController extends AbstractController
     }
 
     #[Route('/api/users/{id}', name: 'deleteUser', methods: ['DELETE'])]
+    #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour supprimer un utilisateur')]
     public function deleteUser(User $user, EntityManagerInterface $em): JsonResponse    
     {       $em->remove($user);     
             $em->flush();
@@ -44,6 +48,7 @@ class UserController extends AbstractController
     }
 
     #[Route('/api/users', name: 'createUser', methods: ['POST'])]
+    #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour créer un utilisateur')]
     public function createUser(Request $request, SerializerInterface $serializer, EntityManagerInterface $em, UrlGeneratorInterface $urlGenerator, ClientRepository $clientRepository, ValidatorInterface $validator)
     {    
            $user = $serializer->deserialize($request->getContent(), User::class, 'json') ;           
@@ -74,6 +79,7 @@ class UserController extends AbstractController
     }
 
     #[Route('/api/users/{id}', name: 'updateUser', methods: ['PUT'])]
+    #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour modifier l\'utilisateur')]
     public function updateUser(Request $request, SerializerInterface $serializer, EntityManagerInterface $em, UrlGeneratorInterface $urlGenerator, ClientRepository $clientRepository, User $currentUser)
     { 
 

@@ -45,7 +45,7 @@ class AppFixtures extends Fixture
             // Création d'un client admin
             $clientAdmin = new Client();            
             $clientAdmin->setEmail("clientadmin@bilemo.com");
-            $clientAdmin->setPassword($this->userPasswordHasher->hashPassword($client, "passwordClientAdmin"));
+            $clientAdmin->setPassword($this->userPasswordHasher->hashPassword($clientAdmin, "passwordClientAdmin"));
             $clientAdmin->setName($faker->company());
             $clientAdmin->setRoles(['ROLE_ADMIN']); // Assign the ROLE_USER role
             $datetime = \DateTimeImmutable::createFromMutable($faker->dateTimeBetween('-1 year', 'now'));
