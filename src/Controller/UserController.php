@@ -6,12 +6,15 @@ use App\Entity\User;
 use App\Entity\Client;
 use App\Repository\UserRepository;
 use App\Repository\ClientRepository;
+
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Contracts\Cache\ItemInterface;
 use \Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Contracts\Cache\TagAwareCacheInterface;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
@@ -24,7 +27,7 @@ use Symfony\Component\DependencyInjection\Loader\Configurator\validator;
 class UserController extends AbstractController
 {
     #[Route('/api/users', name: 'user', methods: ['GET'])]
-    public function getAllUsers(UserRepository $userRepository, SerializerInterface $serializer, Security $security,Request $request): JsonResponse
+    public function getAllUsers(UserRepository $userRepository, SerializerInterface $serializer, Security $security,Request $request, TagAwareCacheInterface $cache): JsonResponse
     {
         // Get the currently authenticated user
         /** @var UserInterface $currentUser */
@@ -38,12 +41,27 @@ class UserController extends AbstractController
         $page = $request->get('page', 1);
         $limit = $request->get('limit', 3);
 
+        // Use caching for the user list
+        $cacheKey = 'getAllUsers' . $currentUser->getId() . '_' . $page;
+        $cachedUserList = $cache->get($cacheKey, function (ItemInterface $item) use ($userRepository, $currentUser, $page, $limit, $serializer) {
+            echo("L'ELEMENT N'EST PAS ENCORE EN CACHE !\n");
+
+        $item->tag("usersCache");
+
         // Retrieve the users associated with the current client
         $userList = $userRepository->findUsersByClientWithPagination($currentUser, $page, $limit);
 
+        // Serialize the user list
         $jsonUserList = $serializer->serialize($userList, 'json', ['groups' => 'getUser']);
-        return new JsonResponse($jsonUserList, Response::HTTP_OK, [], true);
-    
+
+        // Cache the serialized user list for a certain period of time
+        //$item->expiresAfter(3600); // Cache for 1 hour
+
+            return $jsonUserList;
+        });
+
+        return new JsonResponse($cachedUserList, Response::HTTP_OK, [], true);
+
     }
 
 
@@ -69,23 +87,30 @@ class UserController extends AbstractController
 
 
     #[Route('/api/users/{id}', name: 'deleteUser', methods: ['DELETE'])]
-    public function deleteUser(User $requestedUser, EntityManagerInterface $em, Security $security): JsonResponse    
+    public function deleteUser(User $requestedUser, EntityManagerInterface $em, Security $security, TagAwareCacheInterface $cachePool, Request $request, UserRepository $userRepository, SerializerInterface $serializer): JsonResponse    
     {      
         
         $currentUser = $security->getUser();
 
-        // Check if the $currentUser is a Client and $requestedUser is not null to delete the user
-        if (!$currentUser instanceof Client || $requestedUser === null) {
-            throw new AccessDeniedHttpException('Vous n\'êtes pas autorisé de supprimer cet utilisateur.');
-        }
-        // Check if the requested user is associated with the current client
-        if ($requestedUser->getClient() !== $currentUser) {
-            throw new AccessDeniedHttpException('Vous n\'êtes pas autorisé de supprimer cet utilisateur.');
-        }    
-            $em->remove($requestedUser);
-            $em->flush();
+    // Check if the $currentUser is a Client and $requestedUser is not null to delete the user
+    if (!$currentUser instanceof Client || $requestedUser === null) {
+        throw new AccessDeniedHttpException('Vous n\'êtes pas autorisé de supprimer cet utilisateur.');
+    }
+    // Check if the requested user is associated with the current client
+    if ($requestedUser->getClient() !== $currentUser) {
+        throw new AccessDeniedHttpException('Vous n\'êtes pas autorisé de supprimer cet utilisateur.');
+    }    
 
-        return new JsonResponse(null, Response::HTTP_NO_CONTENT);    
+    $page = $request->get('page', 1); // Get the page from the request
+    $cacheKey = 'getAllUsers' . $currentUser->getId() . '_' . $page; // Construct the cache key
+
+    // Delete the cached data for the specific page
+    $cachePool->delete($cacheKey);
+
+    $em->remove($requestedUser);
+    $em->flush();
+
+    return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }
 
     #[Route('/api/users', name: 'createUser', methods: ['POST'])]    
@@ -134,13 +159,8 @@ class UserController extends AbstractController
         }
 
         // Deserialize the updated user data from the request content
-        $updatedUser = $serializer->deserialize(
-        $request->getContent(),
-        User::class,
-        'json',
-        [AbstractNormalizer::OBJECT_TO_POPULATE => $requestedUser]
-        );
-
+        $updatedUser = $serializer->deserialize($request->getContent(), User::class, 'json', [AbstractNormalizer::OBJECT_TO_POPULATE => $requestedUser]);        
+                                
         // Validate the updated user data
         $errors = $validator->validate($updatedUser);
         if (count($errors) > 0) {
