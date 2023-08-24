@@ -2,9 +2,10 @@
 
 namespace App\Entity;
 
-use App\Repository\PhoneRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use App\Repository\PhoneRepository;
+use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: PhoneRepository::class)]
 class Phone
@@ -12,15 +13,19 @@ class Phone
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['getPhone'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['getPhone'])]
     private ?string $name = null;
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
+    #[Groups(['getPhone'])]
     private ?string $description = null;
 
     #[ORM\Column]
+    #[Groups(['getPhone'])]
     private ?\DateTimeImmutable $createdAt = null;
 
     public function getId(): ?int

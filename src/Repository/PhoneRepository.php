@@ -21,6 +21,16 @@ class PhoneRepository extends ServiceEntityRepository
         parent::__construct($registry, Phone::class);
     }
 
+
+    public function findPhonesPaginated($page, $limit)
+    {        
+        $qb = $this->createQueryBuilder('p')            
+            ->setMaxResults($limit)
+            ->setFirstResult(($page - 1) * $limit);
+
+        return $qb->getQuery()->getResult();
+    }
+
     public function save(Phone $entity, bool $flush = false): void
     {
         $this->getEntityManager()->persist($entity);
