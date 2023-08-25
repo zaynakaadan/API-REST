@@ -7,7 +7,8 @@ use App\Repository\ClientRepository;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\Common\Collections\ArrayCollection;
 
-use Symfony\Component\Serializer\Annotation\Groups;
+//use Symfony\Component\Serializer\Annotation\Groups;
+use JMS\Serializer\Annotation\Groups;
 use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 
@@ -17,11 +18,11 @@ class Client implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
-    #[Groups(['getUser'])]
+    #[Groups(['getUsers'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255, unique: true)]
-    #[Groups(['getUser'])]
+    #[Groups(['getUsers'])]
     private ?string $email = null;
 
     #[ORM\Column]
@@ -31,15 +32,15 @@ class Client implements UserInterface, PasswordAuthenticatedUserInterface
      * @var string The hashed password
      */
     #[ORM\Column(length: 255)]
-    #[Groups(['getUser'])]
+    #[Groups(['getUsers'])]
     private ?string $password = null;
 
     #[ORM\Column(length: 255)]
-    #[Groups(['getUser'])]
+    #[Groups(['getUsers'])]
     private ?string $name = null; 
 
     #[ORM\Column]
-    #[Groups(['getUser'])]
+    #[Groups(['getUsers'])]
     private ?\DateTimeImmutable $createdAt = null;
 
     #[ORM\OneToMany(mappedBy: 'client', targetEntity: User::class)]

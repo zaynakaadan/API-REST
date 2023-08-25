@@ -25,6 +25,7 @@ class UserRepository extends ServiceEntityRepository
     public function findUsersByClientWithPagination(Client $client, $page, $limit)
     {
         $qb = $this->createQueryBuilder('u')
+            //->leftJoin('u.client', 'c')
             ->where('u.client = :client')
             ->setParameter('client', $client)
             ->setFirstResult(($page - 1) * $limit)

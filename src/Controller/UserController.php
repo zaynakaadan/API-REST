@@ -7,20 +7,26 @@ use App\Entity\Client;
 use App\Repository\UserRepository;
 use App\Repository\ClientRepository;
 
+
 use Doctrine\ORM\EntityManagerInterface;
+use Hateoas\Serializer\SerializerInterface as SerializerSerializerInterface;
+use JMS\Serializer\SerializationContext;
+use JMS\Serializer\Serializer;
+use JMS\Serializer\SerializerInterface;
 use Symfony\Contracts\Cache\ItemInterface;
 use \Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\HttpFoundation\JsonResponse;
+//use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Contracts\Cache\TagAwareCacheInterface;
-use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\DependencyInjection\Loader\Configurator\validator;
 
@@ -32,7 +38,7 @@ class UserController extends AbstractController
         // Get the currently authenticated user
         /** @var UserInterface $currentUser */
         $currentUser = $security->getUser();
-
+        
         // If the user is not a client, return an access denied response
         if (!$currentUser instanceof Client) {
             throw $this->createAccessDeniedException('Vous n\'êtes pas autorisé à consulter cette liste d\'utilisateurs.');
@@ -40,33 +46,36 @@ class UserController extends AbstractController
 
         $page = $request->get('page', 1);
         $limit = $request->get('limit', 3);
-
+        
         // Use caching for the user list
-        $cacheKey = 'getAllUsers' . $currentUser->getId() . '_' . $page;
-        $cachedUserList = $cache->get($cacheKey, function (ItemInterface $item) use ($userRepository, $currentUser, $page, $limit, $serializer) {
+        $cacheKey = 'getAllUsers' . $currentUser->getId() . '_' . $page; 
+
+        $cachedUserList = $cache->get($cacheKey, function (ItemInterface $item) use ($userRepository, $currentUser, $page, $limit, $serializer) {            
             echo("L'ELEMENT N'EST PAS ENCORE EN CACHE !\n");
-
+            
         $item->tag("usersCache");
-
+        
         // Retrieve the users associated with the current client
         $userList = $userRepository->findUsersByClientWithPagination($currentUser, $page, $limit);
-
-        // Serialize the user list
-        $jsonUserList = $serializer->serialize($userList, 'json', ['groups' => 'getUser']);
-
+       
+        // Serialize the user list        
+        $context = SerializationContext::create()->setGroups(['getUsers']);
+      
+        $jsonUserList = $serializer->serialize($userList, 'json', $context);
+        
         // Cache the serialized user list for a certain period of time
         //$item->expiresAfter(3600); // Cache for 1 hour
 
             return $jsonUserList;
         });
-
+        
         return new JsonResponse($cachedUserList, Response::HTTP_OK, [], true);
 
     }
 
 
     #[Route('/api/users/{id}', name: 'detailUser', methods: ['GET'])]   
-    public function getDetailUser(User $requestedUser, SerializerInterface $serializer, Security $security)
+    public function getDetailUser(User $requestedUser, SerializerInterface $serializer, Security $security): JsonResponse
     {   
         // Get the currently authenticated user
         $currentUser = $security->getUser();
@@ -80,8 +89,10 @@ class UserController extends AbstractController
         if ($requestedUser->getClient() !== $currentUser) {
             throw new AccessDeniedHttpException('Vous n\'êtes pas autorisé à voir cet utilisateur.');
         }
-
-        $jsonUser = $serializer->serialize($requestedUser, 'json', ['groups' => 'getUser']);
+                
+        $context = SerializationContext::create()->setGroups(['getUsers']);
+        $jsonUser = $serializer->serialize($requestedUser, 'json', $context);
+       
         return new JsonResponse($jsonUser, Response::HTTP_OK, [], true);
     }
 
@@ -114,7 +125,7 @@ class UserController extends AbstractController
     }
 
     #[Route('/api/users', name: 'createUser', methods: ['POST'])]    
-    public function createUser(Request $request, SerializerInterface $serializer, EntityManagerInterface $em, UrlGeneratorInterface $urlGenerator, ClientRepository $clientRepository, ValidatorInterface $validator, Security $security)
+    public function createUser(Request $request, SerializerInterface $serializer, EntityManagerInterface $em, UrlGeneratorInterface $urlGenerator,  ValidatorInterface $validator, Security $security)
     {    
         // Deserialize the user data from the request content
         $user = $serializer->deserialize($request->getContent(), User::class, 'json');
@@ -127,6 +138,8 @@ class UserController extends AbstractController
 
         // Set the current client as the user's client
         $user->setClient($currentUser);
+        // Set the createdAt field
+        $user->setCreatedAt(new \DateTimeImmutable());
 
         // Validate the user data
         $errors = $validator->validate($user);
@@ -138,14 +151,21 @@ class UserController extends AbstractController
         $em->persist($user);
         $em->flush();
 
+        // Check if the user has a valid ID before generating the URL
+        if ($user->getId()) {
         // Serialize the user data and return the response
-        $jsonUser = $serializer->serialize($user, 'json', ['groups' => 'getUser']);
+        $context = SerializationContext::create()->setGroups(['getUsers']);
+        $jsonUser = $serializer->serialize($user, 'json', $context);
         $location = $urlGenerator->generate('detailUser', ['id' => $user->getId()], UrlGeneratorInterface::ABSOLUTE_PATH);
-        return new JsonResponse($jsonUser, JsonResponse::HTTP_CREATED, ["Location" => $location], true);                                            
+        
+        return new JsonResponse($jsonUser, JsonResponse::HTTP_CREATED, ["Location" => $location], true);                           
+        } else {
+            return new JsonResponse('Error creating user', JsonResponse::HTTP_INTERNAL_SERVER_ERROR);
+        }
     }
 
     #[Route('/api/users/{id}', name: 'updateUser', methods: ['PUT'])]
-    public function updateUser(User $requestedUser, Request $request, SerializerInterface $serializer, EntityManagerInterface $em, UrlGeneratorInterface $urlGenerator, ClientRepository $clientRepository, User $currentUser, Security $security, ValidatorInterface $validator)        
+    public function updateUser(User $requestedUser, Request $request, SerializerInterface $serializer, EntityManagerInterface $em, User $currentUser, Security $security, ValidatorInterface $validator)        
     {   
         // Ensure the current user is a client
         $currentUser = $security->getUser();
@@ -159,16 +179,18 @@ class UserController extends AbstractController
         }
 
         // Deserialize the updated user data from the request content
-        $updatedUser = $serializer->deserialize($request->getContent(), User::class, 'json', [AbstractNormalizer::OBJECT_TO_POPULATE => $requestedUser]);        
-                                
+        $updatedUser = $serializer->deserialize($request->getContent(), User::class, 'json');        
+         
+        $requestedUser->setFirstname($updatedUser->getFirstname());
+        $requestedUser->setLastname($updatedUser->getLastname()); 
+        
         // Validate the updated user data
         $errors = $validator->validate($updatedUser);
         if (count($errors) > 0) {
             return new JsonResponse($serializer->serialize($errors, 'json'), JsonResponse::HTTP_BAD_REQUEST, [], true);
         }
 
-        // Persist and flush the updated user entity
-        $em->persist($updatedUser);
+        // Persist and flush the updated user entity        
         $em->flush();
                     
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
