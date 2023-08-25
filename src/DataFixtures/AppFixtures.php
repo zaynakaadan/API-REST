@@ -61,6 +61,7 @@ class AppFixtures extends Fixture
             $user->setClient($faker->randomElement($clients));
             $createdAt = new \DateTimeImmutable();
             $user->setCreatedAt($createdAt);
+            $user->setComment("Commentaire du user" . $j);
             $manager->persist($user);
 
         }

@@ -2,11 +2,13 @@
 
 namespace App\Entity;
 
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use App\Repository\UserRepository;
+use JMS\Serializer\Annotation\Since;
 use JMS\Serializer\Annotation\Groups;
-use Symfony\Component\Validator\Constraints as Assert;
 use Hateoas\Configuration\Annotation as Hateoas;
+use Symfony\Component\Validator\Constraints as Assert;
 
 /**
  * @Hateoas\Relation(
@@ -76,6 +78,11 @@ class User
     #[Groups(['getUsers'])]
     private ?Client $client = null;
 
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    #[Groups(['getUsers'])]
+    #[Since("2.0")]
+    private ?string $comment = null;
+
     public function __construct()
     {
         $this->createdAt = new \DateTimeImmutable();
@@ -130,6 +137,18 @@ class User
     public function setClient(?Client $client): static
     {
         $this->client = $client;
+
+        return $this;
+    }
+
+    public function getComment(): ?string
+    {
+        return $this->comment;
+    }
+
+    public function setComment(?string $comment): static
+    {
+        $this->comment = $comment;
 
         return $this;
     }

@@ -4,15 +4,15 @@ namespace App\Controller;
 
 use App\Entity\User;
 use App\Entity\Client;
-use App\Repository\UserRepository;
-use App\Repository\ClientRepository;
-
-
-use Doctrine\ORM\EntityManagerInterface;
-use Hateoas\Serializer\SerializerInterface as SerializerSerializerInterface;
-use JMS\Serializer\SerializationContext;
 use JMS\Serializer\Serializer;
+use App\Repository\UserRepository;
+
+
+use App\Service\VersioningService;
+use App\Repository\ClientRepository;
 use JMS\Serializer\SerializerInterface;
+use Doctrine\ORM\EntityManagerInterface;
+use JMS\Serializer\SerializationContext;
 use Symfony\Contracts\Cache\ItemInterface;
 use \Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\Request;
@@ -29,6 +29,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\DependencyInjection\Loader\Configurator\validator;
+use Hateoas\Serializer\SerializerInterface as SerializerSerializerInterface;
 
 class UserController extends AbstractController
 {
@@ -75,7 +76,7 @@ class UserController extends AbstractController
 
 
     #[Route('/api/users/{id}', name: 'detailUser', methods: ['GET'])]   
-    public function getDetailUser(User $requestedUser, SerializerInterface $serializer, Security $security): JsonResponse
+    public function getDetailUser(User $requestedUser, SerializerInterface $serializer, Security $security, VersioningService $versioningService): JsonResponse
     {   
         // Get the currently authenticated user
         $currentUser = $security->getUser();
@@ -89,8 +90,9 @@ class UserController extends AbstractController
         if ($requestedUser->getClient() !== $currentUser) {
             throw new AccessDeniedHttpException('Vous n\'êtes pas autorisé à voir cet utilisateur.');
         }
-                
+        $version = $versioningService->getVersion();    
         $context = SerializationContext::create()->setGroups(['getUsers']);
+        $context->setVersion($version);
         $jsonUser = $serializer->serialize($requestedUser, 'json', $context);
        
         return new JsonResponse($jsonUser, Response::HTTP_OK, [], true);
