@@ -30,12 +30,51 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\DependencyInjection\Loader\Configurator\validator;
 use Hateoas\Serializer\SerializerInterface as SerializerSerializerInterface;
+use Nelmio\ApiDocBundle\Annotation\Model;
+//use Nelmio\ApiDocBundle\Annotation\Security;
+use OpenApi\Annotations as OA;
+
 
 class UserController extends AbstractController
 {
+    /**
+     * 
+     * Cette méthode permet de récupérer l'ensemble des users.
+     *
+     * @OA\Response(
+     *     response=200,
+     *     description="Retourne la liste des users",
+     *     @OA\JsonContent(
+     *        type="array",
+     *        @OA\Items(ref=@Model(type=User::class, groups={"getUsers"}))
+     *     )
+     * )
+     * @OA\Parameter(
+     *     name="page",
+     *     in="query",
+     *     description="La page que l'on veut récupérer",
+     *     @OA\Schema(type="int")
+     * )
+     *
+     * @OA\Parameter(
+     *     name="limit",
+     *     in="query",
+     *     description="Le nombre d'éléments que l'on veut récupérer",
+     *     @OA\Schema(type="int")
+     * )
+     * @OA\Tag(name="Users")
+     *
+     * @param UserRepository $UserRepository
+     * @param SerializerInterface $serializer
+     * @param Security $security
+     * @param Request $request
+     * @param TagAwareCacheInterface $cache
+     * @return JsonResponse
+     */
     #[Route('/api/users', name: 'user', methods: ['GET'])]
     public function getAllUsers(UserRepository $userRepository, SerializerInterface $serializer, Security $security,Request $request, TagAwareCacheInterface $cache): JsonResponse
     {
+    
         // Get the currently authenticated user
         /** @var UserInterface $currentUser */
         $currentUser = $security->getUser();
@@ -73,8 +112,50 @@ class UserController extends AbstractController
         return new JsonResponse($cachedUserList, Response::HTTP_OK, [], true);
 
     }
-
-
+    
+    /**
+     *
+     * @OA\Get(
+     *     path="/api/users/{id}",
+     *     summary="Get details of a user",
+     *     tags={"Users"},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         description="The ID of the user",
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Returns the details of the user",
+     *         @OA\JsonContent(
+     *            type="object",
+     *            @OA\Property(property="id", type="integer"),
+     *            @OA\Property(property="username", type="string"),
+     *            @OA\Property(property="firstname", type="string"),
+     *            @OA\Property(property="lastname", type="string"),
+     *            @OA\Property(property="email", type="string"),
+     *            @OA\Property(property="createdAt", type="string", format="date-time")
+     *            
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Access denied",
+     *         @OA\JsonContent(
+     *            @OA\Property(property="message", type="string")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="User not found",
+     *         @OA\JsonContent(
+     *            @OA\Property(property="message", type="string")
+     *         )
+     *     )
+     * )
+     */
     #[Route('/api/users/{id}', name: 'detailUser', methods: ['GET'])]   
     public function getDetailUser(User $requestedUser, SerializerInterface $serializer, Security $security, VersioningService $versioningService): JsonResponse
     {   
@@ -98,7 +179,39 @@ class UserController extends AbstractController
         return new JsonResponse($jsonUser, Response::HTTP_OK, [], true);
     }
 
-
+    /**
+     *
+     * @OA\Delete(
+     *     path="/api/users/{id}",
+     *     summary="Delete a user",
+     *     tags={"Users"},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         description="The ID of the user",
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\Response(
+     *         response=204,
+     *         description="User deleted successfully"
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Access denied",
+     *         @OA\JsonContent(
+     *            @OA\Property(property="message", type="string")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="User not found",
+     *         @OA\JsonContent(
+     *            @OA\Property(property="message", type="string")
+     *         )
+     *     )
+     * )
+     */
     #[Route('/api/users/{id}', name: 'deleteUser', methods: ['DELETE'])]
     public function deleteUser(User $requestedUser, EntityManagerInterface $em, Security $security, TagAwareCacheInterface $cachePool, Request $request, UserRepository $userRepository, SerializerInterface $serializer): JsonResponse    
     {      
@@ -126,6 +239,40 @@ class UserController extends AbstractController
     return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }
 
+    /**
+     *
+     * @OA\Post(
+     *     path="/api/users",
+     *     summary="Create a new user",
+     *     tags={"Users"},
+     *     @OA\RequestBody(
+     *         description="User object to be created",
+     *         required=true,
+     *         @OA\JsonContent(ref=@Model(type=User::class, groups={"createUser"}))
+     *     ),
+     *     @OA\Response(
+     *         response=201,
+     *         description="User created successfully",
+     *         @OA\JsonContent(
+     *             ref=@Model(type=User::class, groups={"getUsers"})
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="Bad request",
+     *         @OA\JsonContent(
+     *            @OA\Property(property="message", type="string")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Access denied",
+     *         @OA\JsonContent(
+     *            @OA\Property(property="message", type="string")
+     *         )
+     *     )
+     * )
+     */
     #[Route('/api/users', name: 'createUser', methods: ['POST'])]    
     public function createUser(Request $request, SerializerInterface $serializer, EntityManagerInterface $em, UrlGeneratorInterface $urlGenerator,  ValidatorInterface $validator, Security $security)
     {    
@@ -166,6 +313,44 @@ class UserController extends AbstractController
         }
     }
 
+     /**
+     *
+     * @OA\Put(
+     *     path="/api/users/{id}",
+     *     summary="Update user details",
+     *     tags={"Users"},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         description="ID of the user to update",
+     *         required=true,
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\RequestBody(
+     *         description="Updated user object",
+     *         required=true,
+     *         @OA\JsonContent(ref=@Model(type=User::class, groups={"updateUser"}))
+     *     ),
+     *     @OA\Response(
+     *         response=204,
+     *         description="User updated successfully"
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="Bad request",
+     *         @OA\JsonContent(
+     *            @OA\Property(property="message", type="string")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Access denied",
+     *         @OA\JsonContent(
+     *            @OA\Property(property="message", type="string")
+     *         )
+     *     )
+     * )
+     */   
     #[Route('/api/users/{id}', name: 'updateUser', methods: ['PUT'])]
     public function updateUser(User $requestedUser, Request $request, SerializerInterface $serializer, EntityManagerInterface $em, User $currentUser, Security $security, ValidatorInterface $validator)        
     {   

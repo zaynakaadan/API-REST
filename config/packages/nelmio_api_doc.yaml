@@ -1,0 +1,14 @@
+nelmio_api_doc:
+    documentation:
+        info:
+            title: BileMo 
+            description: BileMo est une entreprise offrant toute une sélection de téléphones mobiles haut de gamme !
+            version: 1.0.0
+    areas:
+        default:
+            path_patterns:
+                - ^/api(?!/doc$) # Accepts routes under /api except /api/doc
+        secured_area:
+            path_patterns:
+                - ^/api/login_check
+                
