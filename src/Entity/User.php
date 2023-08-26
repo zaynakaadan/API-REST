@@ -10,6 +10,7 @@ use JMS\Serializer\Annotation\Groups;
 use Hateoas\Configuration\Annotation as Hateoas;
 use Symfony\Component\Validator\Constraints as Assert;
 
+
 /**
  * @Hateoas\Relation(
  *      "self",
@@ -40,6 +41,7 @@ use Symfony\Component\Validator\Constraints as Assert;
  *
  */
 #[ORM\Entity(repositoryClass: UserRepository::class)]
+
 class User
 {
     #[ORM\Id]

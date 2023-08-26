@@ -31,8 +31,10 @@ use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\DependencyInjection\Loader\Configurator\validator;
 use Hateoas\Serializer\SerializerInterface as SerializerSerializerInterface;
 use Nelmio\ApiDocBundle\Annotation\Model;
+use Nelmio\ApiDocBundle\Annotation\Security as AnnotationSecurity;
 //use Nelmio\ApiDocBundle\Annotation\Security;
 use OpenApi\Annotations as OA;
+//use Sensio\Bundle\FrameworkExtraBundle\Configuration\Security;
 
 
 class UserController extends AbstractController
@@ -72,6 +74,7 @@ class UserController extends AbstractController
      * @return JsonResponse
      */
     #[Route('/api/users', name: 'user', methods: ['GET'])]
+    //#[Security('is_authenticated()')]
     public function getAllUsers(UserRepository $userRepository, SerializerInterface $serializer, Security $security,Request $request, TagAwareCacheInterface $cache): JsonResponse
     {
     
@@ -118,6 +121,7 @@ class UserController extends AbstractController
      * @OA\Get(
      *     path="/api/users/{id}",
      *     summary="Get details of a user",
+     *     security={{"bearerAuth": {}}},
      *     tags={"Users"},
      *     @OA\Parameter(
      *         name="id",

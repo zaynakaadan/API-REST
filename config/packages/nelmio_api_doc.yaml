@@ -3,7 +3,12 @@ nelmio_api_doc:
         info:
             title: BileMo 
             description: BileMo est une entreprise offrant toute une sélection de téléphones mobiles haut de gamme !
-            version: 1.0.0
+            version: 3.0.0
+        #securitySchemes:
+            #bearerAuth:
+                #type: header
+                #scheme: bearer
+                #bearerFormat: JWT
     areas:
         default:
             path_patterns:
@@ -11,4 +16,21 @@ nelmio_api_doc:
         secured_area:
             path_patterns:
                 - ^/api/login_check
-                
+                - ^/api/other_secured_path # Add other secured paths if needed
+
+    #models:
+        #Token:
+            #properties:
+                #token:
+                    #type: string
+                    #readOnly: true
+        #Credentials:
+            #properties:
+                #username:
+                    #type: string
+                    #default: admin@bookapi.com
+                #password:
+                    #type: string
+                    #default: password
+    #media_types:
+        # Define your media types here if needed
