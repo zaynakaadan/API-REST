@@ -1,0 +1,2 @@
+# API-REST
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/d1fb453e254a45dc800ff633b4e77f43)](https://app.codacy.com/gh/zaynakaadan/API-REST?utm_source=github.com&utm_medium=referral&utm_content=zaynakaadan/API-REST&utm_campaign=Badge_Grade)
