@@ -19,7 +19,6 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\HttpFoundation\JsonResponse;
-//use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Contracts\Cache\TagAwareCacheInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
@@ -32,9 +31,8 @@ use Symfony\Component\DependencyInjection\Loader\Configurator\validator;
 use Hateoas\Serializer\SerializerInterface as SerializerSerializerInterface;
 use Nelmio\ApiDocBundle\Annotation\Model;
 use Nelmio\ApiDocBundle\Annotation\Security as AnnotationSecurity;
-//use Nelmio\ApiDocBundle\Annotation\Security;
 use OpenApi\Annotations as OA;
-//use Sensio\Bundle\FrameworkExtraBundle\Configuration\Security;
+
 
 
 class UserController extends AbstractController
@@ -74,7 +72,6 @@ class UserController extends AbstractController
      * @return JsonResponse
      */
     #[Route('/api/users', name: 'user', methods: ['GET'])]
-    //#[Security('is_authenticated()')]
     public function getAllUsers(UserRepository $userRepository, SerializerInterface $serializer, Security $security,Request $request, TagAwareCacheInterface $cache): JsonResponse
     {
     
@@ -293,7 +290,7 @@ class UserController extends AbstractController
         $user->setClient($currentUser);
         // Set the createdAt field
         $user->setCreatedAt(new \DateTimeImmutable());
-
+        $user->setComment("Commentaire du user");
         // Validate the user data
         $errors = $validator->validate($user);
         if (count($errors) > 0) {
