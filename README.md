@@ -1,6 +1,11 @@
 # API-REST
 Project 7 - API REST BileMo - OCR
 
+
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/a85ccacff16b49a39f59f206f124a0cd)](https://app.codacy.com/gh/zaynakaadan/API-REST/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
+<h3>Documentation en ligne :</h3>
+<p>Une interface pour documenter l'API et teser les différentes méthodes a été réalisée à l'aide de NelmioApiDocBundle.</p>
+
 <h3>Documentation</h3>
 <p>L'ensemble du code source a été commenté. L'utilsation de PhpDocBlocker a permis de générer une documentation claire et précise.</p>
 
