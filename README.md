@@ -79,4 +79,4 @@ Les fonctoinnalités décrites dans les diagrammes concernent les clients, les u
 </ul>
   
 <h3>Vous êtes fin prêt pour tester votre API!</h3>
-<p>Pour afficher la doucmentation en ligne et tester l'APIrendez-vous à l'adresse suivante votre navigateur : <em>http://yourAdress.domain.fr/doc/api</em></p>
+<p>Pour afficher la doucmentation en ligne et tester l'APIrendez-vous à l'adresse suivante votre navigateur : <em>http://yourAdress.domain.fr/api/doc</em></p>
