@@ -43,7 +43,7 @@ Les fonctoinnalités décrites dans les diagrammes concernent les clients, les u
    <li><b>Etape 1.2 :</b> Executer la commande suivante :</li>
   <pre>
   <code>composer install</code></pre>     
-  
+  <li>
     <li><b>Etape 1.3* :</b> Si besoins, ajouter le package symfony/apache-pack (en fonction de votre environnement de déploiement) :</li>
   <pre>
   <code>composer require symfony/apache-pack</code></pre>     
