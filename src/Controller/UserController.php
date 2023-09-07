@@ -88,7 +88,7 @@ class UserController extends AbstractController
         $limit = $request->get('limit', 3);
         
         // Use caching for the user list
-        $cacheKey = 'getAllUsers' . $currentUser->getId() . '_' . $page; 
+        $cacheKey = 'getAllUsers' . $currentUser->getId() . '_' . $page. '_limit_' . $limit; 
 
         $cachedUserList = $cache->get($cacheKey, function (ItemInterface $item) use ($userRepository, $currentUser, $page, $limit, $serializer) {            
             echo("L'ELEMENT N'EST PAS ENCORE EN CACHE !\n");
